@@ -41,7 +41,7 @@ const __dirnamePath = path.resolve();
 const clientBuildPath = path.join(__dirnamePath, '..', 'client', 'dist');
 
 // Serve static files
-// app.use(express.static(clientBuildPath));
+app.use(express.static(clientBuildPath));
 
 // For any route not starting with /api, send index.html
 app.get('*', (req, res) => {
