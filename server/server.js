@@ -37,18 +37,18 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 
 // Absolute path to client build folder
-// const __dirnamePath = path.resolve();
-// const clientBuildPath = path.join(__dirnamePath, '..', 'client', 'dist');
+const __dirnamePath = path.resolve();
+const clientBuildPath = path.join(__dirnamePath, '..', 'client', 'dist');
 
 // Serve static files
-// app.use(express.static(clientBuildPath));
+app.use(express.static(clientBuildPath));
 
 // For any route not starting with /api, send index.html
-// app.get('*', (req, res) => {
-//     if (!req.path.startsWith('/api')) {
-//         res.sendFile(path.join(clientBuildPath, 'index.html'));
-//     }
-// });
+app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(clientBuildPath, 'index.html'));
+    }
+});
 
 
 app.use((err, req, res, next) => {
