@@ -208,6 +208,6 @@ The repository includes a [`render.yaml`](render.yaml) Blueprint that deploys th
 
 ## 👤 Author
 
-**Utkarsh Pal** · GitHub: [TechTinker5](https://github.com/TechTinker5)
+**Utkarsh Pal** · GitHub: [swinter-ctrl](https://github.com/swinter-ctrl)
 
 If you found this project useful, consider giving it a ⭐.
