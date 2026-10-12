@@ -141,7 +141,7 @@ Return ONLY valid JSON.`;
     const aiResponse = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
-        model: "llama-3.3-70b-versatile",
+        model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
         messages: [
           {
             role: "user",
@@ -149,7 +149,9 @@ Return ONLY valid JSON.`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 1024
+        reasoning_effort: "low",
+        response_format: { type: "json_object" },
+        max_tokens: 4096
       },
       {
         headers: {

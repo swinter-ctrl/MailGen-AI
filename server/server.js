@@ -45,9 +45,10 @@ app.use(express.static(clientBuildPath));
 
 // For any route not starting with /api, send index.html
 app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(clientBuildPath, 'index.html'));
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ message: 'API route not found' });
     }
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 
