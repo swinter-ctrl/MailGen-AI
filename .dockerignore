@@ -6,3 +6,5 @@
 *.md
 image.png
 *.postman_collection.json
+server/tests
+**/coverage

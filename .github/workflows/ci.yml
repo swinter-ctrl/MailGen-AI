@@ -31,6 +31,23 @@ jobs:
       - name: Syntax-check server
         run: find server -name '*.js' -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check
 
+      - name: Cache MongoDB test binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('server/package-lock.json') }}
+
+      - name: Run tests with coverage
+        run: npm run test:coverage --prefix server
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: server/coverage/
+          if-no-files-found: ignore
+
       - name: Install client dependencies
         run: npm ci --prefix client
 

@@ -32,6 +32,7 @@ A full-stack MERN application that turns a one-line prompt into a complete job-o
 | Backend | Node.js, Express, JWT, bcrypt, Nodemailer |
 | Database | MongoDB Atlas, Mongoose |
 | AI | Groq API (`openai/gpt-oss-120b` by default) |
+| Testing | Jest, Supertest, mongodb-memory-server |
 | DevOps | Docker, Docker Compose, GitHub Actions, GitHub Container Registry, Render |
 
 ---
@@ -56,7 +57,9 @@ MailGen-AI/
 │   ├── models/             # User, EmailHistory (Mongoose)
 │   ├── routes/             # /api/auth, /api/ai
 │   ├── utils/              # Nodemailer email service
-│   └── server.js           # App entry: API + static client + health check
+│   ├── tests/              # Jest + Supertest integration tests
+│   ├── app.js              # Express app (routes, middleware) - imported by tests
+│   └── server.js           # Entry point: env checks, DB connection, listen
 ├── Dockerfile              # Multi-stage production image
 ├── docker-compose.yml      # App + MongoDB for local use
 ├── render.yaml             # Render Blueprint
@@ -125,6 +128,26 @@ npm run dev
 
 ---
 
+## 🧪 Testing
+
+The backend has **35 integration tests** written with **Jest** and **Supertest**, running against an in-memory MongoDB (`mongodb-memory-server`). No real database, email server, or AI API is needed: Nodemailer and the Groq API are mocked.
+
+```bash
+cd server
+npm test               # run the suite
+npm run test:coverage  # run with a coverage report (server/coverage/)
+```
+
+| Suite | What it covers |
+|-------|----------------|
+| `auth.test.js` | Registration (validation, bcrypt hashing, duplicate emails, OTP email), OTP verification (wrong / expired / malformed / reused OTPs), and login (unverified users, wrong credentials, case-insensitive email) |
+| `ai.test.js` | JWT middleware (missing, malformed, forged, and orphaned tokens), email generation (Groq request shape, JSON extraction, invalid AI output, rate-limit handling, prompt validation), and per-user history isolation and ordering |
+| `app.test.js` | Health check and 404 handling for unknown API routes |
+
+Current coverage: **~92% of lines** across controllers, middleware, models, and routes.
+
+---
+
 ## 🐳 Running with Docker
 
 The multi-stage `Dockerfile` builds the React client in a throwaway stage, then copies only the compiled files into a slim Node 22 runtime with production dependencies. The final image runs as a non-root user and includes a health check against `/api/health`.
@@ -158,6 +181,7 @@ push / PR
    │
    ├─ 1. Build & check ─────────── npm ci (client + server)
    │                                syntax-check server code
+   │                                Jest + Supertest tests with coverage
    │                                vite build
    │
    ├─ 2. Docker smoke test ──────── build production image
@@ -201,7 +225,7 @@ The repository includes a [`render.yaml`](render.yaml) Blueprint that deploys th
 
 - [ ] HTTP-based email provider for OTP delivery
 - [ ] Resend-OTP flow
-- [ ] Unit and integration tests in CI
+- [x] Integration tests in CI (Jest + Supertest)
 - [ ] Tone and length controls for generated messages
 
 ---
