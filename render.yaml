@@ -3,7 +3,7 @@ services:
     name: mailgen-ai
     runtime: node
     plan: free
-    buildCommand: npm run build && npm --prefix server install
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: MONGODB_URI
