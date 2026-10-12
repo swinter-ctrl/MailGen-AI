@@ -3,6 +3,7 @@ services:
     name: mailgen-ai
     runtime: node
     plan: free
+    autoDeployTrigger: checksPass
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:

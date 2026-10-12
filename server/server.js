@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const mongoose = require('mongoose');
 
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
@@ -35,6 +36,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
+
+app.get('/api/health', (req, res) => {
+    const dbUp = mongoose.connection.readyState === 1;
+    res.status(dbUp ? 200 : 503).json({ status: dbUp ? 'ok' : 'degraded', db: dbUp ? 'connected' : 'disconnected' });
+});
 
 // Absolute path to client build folder
 const __dirnamePath = path.resolve();

@@ -1,0 +1,94 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build & check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install server dependencies
+        run: npm ci --prefix server
+
+      - name: Syntax-check server
+        run: find server -name '*.js' -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Build client
+        run: npm run build --prefix client
+
+  docker:
+    name: Docker build & smoke test
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t mailgen-ai:ci .
+
+      - name: Start container
+        run: |
+          docker run -d --name app --network host \
+            -e PORT=5000 \
+            -e MONGODB_URI=mongodb://localhost:27017/ci \
+            -e JWT_SECRET=ci-only-secret \
+            -e GROQ_API_KEY=ci-dummy-key \
+            mailgen-ai:ci
+
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:5000/api/health; then echo; break; fi
+            sleep 2
+          done
+          curl -fs http://localhost:5000/api/health | grep -q '"db":"connected"'
+          curl -fs http://localhost:5000/ | grep -q '<div id="root">'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/does-not-exist)" = 404
+          echo "Smoke test passed"
+
+      - name: Show container logs
+        if: failure()
+        run: docker logs app
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          IMAGE=ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker tag mailgen-ai:ci $IMAGE:latest
+          docker tag mailgen-ai:ci $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+          docker push $IMAGE:${{ github.sha }}

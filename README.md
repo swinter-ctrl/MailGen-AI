@@ -4,8 +4,8 @@ A fully dockerized full-stack MERN application that uses AI to generate customiz
 
 ## Features Added
 - **Monorepo setup**: Single `package.json` to install and run the entire stack concurrently.
-- **Docker & Docker Compose**: Bootstraps the Node API, React Frontend, and MongoDB database automatically in isolated containers.
-- **CI/CD via GitHub Actions**: Ensures that all dependencies install correctly and frontend builds continuously upon pushing changes to GitHub.
+- **Docker**: Multi-stage production image (client build + slim Node runtime) and Docker Compose with MongoDB.
+- **CI/CD via GitHub Actions**: Build, Docker smoke test against MongoDB, image publish to GHCR, and Render deploys only after checks pass.
 
 ---
 
@@ -14,7 +14,7 @@ A fully dockerized full-stack MERN application that uses AI to generate customiz
 **1. Install all dependencies**  
 Run this command from the root folder (it installs root, server, and client Node dependencies):
 \`\`\`bash
-npm run install:all
+npm run install-all
 \`\`\`
 
 **2. Setup your Environment Variables**  
@@ -32,38 +32,36 @@ The GUI will be on `http://localhost:5173` and the API firmly rooted at `http://
 
 ## 🐳 How to Run with Docker
 
-If you prefer using Docker, you don't even need to install Node locally. Docker Compose will spin up 3 instances automatically:
-1. React Frontend Container
-2. Node API Container
-3. MongoDB Database Container
+The app ships as a single production image built with a multi-stage `Dockerfile`:
+1. **Stage 1** builds the React client with Vite.
+2. **Stage 2** installs only the server's production dependencies and serves both the API and the built client from one Node container (runs as a non-root user, with a built-in health check).
+
+`docker-compose.yml` runs that image alongside MongoDB 7.
 
 **Steps:**
-1. Be in the root folder.
-2. Ensure Docker Desktop is open and running.
-3. Build and spin up the architecture:
-   \`\`\`bash
-   docker-compose up --build
-   \`\`\`
-   *(Note: This uses the environment variables configured within the `docker-compose.yml` file. Update the secrets inside that file before running it in production).*
+1. Make sure Docker Desktop is running.
+2. Create `server/.env` (see `SETUP_AND_DEPLOYMENT.md`). Compose reads `GROQ_API_KEY`, `JWT_SECRET`, `EMAIL_USER` and `EMAIL_PASS` from it and points `MONGODB_URI` at the bundled Mongo container automatically.
+3. Build and start:
+   ```bash
+   docker compose up --build
+   ```
+4. Open http://localhost:5000. Health check: http://localhost:5000/api/health
 
-To stop containers:
-\`\`\`bash
-docker-compose down
-\`\`\`
+To stop: `docker compose down` (add `-v` to also delete the database volume).
 
 ---
 
 ## 🔁 CI/CD (GitHub Actions Pipeline)
 
-This repository includes a `.github/workflows/pipeline.yml` file. 
+`.github/workflows/ci.yml` runs on every push and pull request to `main`:
 
-Whenever you push to `main` (or create a Pull Request against it), GitHub Actions will automatically:
-- Checkout your code.
-- Setup Node.js v18.
-- Install Root, Client, and Server dependencies respectively.
-- Run a `npm run build` on your `/client` to ensure Vite successfully bundles the frontend. 
+| Job | What it does |
+|-----|--------------|
+| **Build & check** | Installs client and server dependencies with `npm ci`, syntax-checks the server, and builds the client with Vite. |
+| **Docker build & smoke test** | Builds the production image, starts it against a real MongoDB service container, and checks that `/api/health` reports the DB connected, the frontend is served, and unknown API routes return 404. |
+| **Publish** (main only) | Pushes the image to GitHub Container Registry as `ghcr.io/<owner>/mailgen-ai:latest` and `:<commit-sha>`. |
 
-It prevents bad pushes from making it effectively resolving broken dependencies early on.
+**Continuous deployment:** the Render service uses *Auto-Deploy: After CI Checks Pass*, so Render only deploys a commit once this pipeline is green.
 
 ---
 

@@ -1,0 +1,8 @@
+**/node_modules
+**/.env
+**/dist
+.git
+.github
+*.md
+image.png
+*.postman_collection.json
